@@ -3,23 +3,24 @@
 #include <string.h>
 
 typedef struct arvore{
-    int rep;
-    unsigned char valor;
+    void* rep;
+    void* valor;
     struct arvore *esq, *dir;
 }arvore;
 
 typedef struct lista{
-    int tam;
+    void* tam;
     struct arvore *raiz;
     struct lista *prox;
 }lista;
 
-void swap(lista *a, lista *b){
+void swap(lista *a, lista *b){ //Troca os ponteiros de lugar
     arvore *aux = a->raiz;
     a->raiz = b->raiz;
     b->raiz = aux;
 }
 
+//(PROVISORIO ATÉ UM QUICK SORT APARECER DO CÉU)
 void insertion_sort_list(lista *head) { //insert_sort para listas encadeadas
     if (head == NULL) return; // Verifica se a lista está vazia
     lista *i, *j;
@@ -32,12 +33,12 @@ void insertion_sort_list(lista *head) { //insert_sort para listas encadeadas
     }
 }
 
-arvore* criar_arvore(unsigned char v, arvore *esquerda, arvore *direita){
+arvore* criar_arvore(unsigned char v, arvore *esquerda, arvore *direita){ //Cria uma arvore
     arvore *new = (arvore*) malloc(sizeof(arvore));
     new->dir = direita;
     new->esq = esquerda;
-    if(esquerda != NULL && direita != NULL){
-        new->rep = esquerda->rep + direita->rep;
+    if(esquerda != NULL && direita != NULL){ //(ACHO QUE DÁ PRA FAZER ISSO MELHOR MAS N TENHO CERTEZA)
+        new->rep = *((int*)esquerda->rep) + *((int*)direita->rep);
     }
     else if(esquerda != NULL){
         new->rep = esquerda->rep;
@@ -53,12 +54,12 @@ arvore* criar_arvore(unsigned char v, arvore *esquerda, arvore *direita){
     return new;
 }
 
-lista* remover_inicio(lista **head){
-    if(*head == NULL) return NULL;
+lista* remover_inicio(lista **head){ //remove o primeiro item da lista
+    if(*head == NULL) return NULL; //caso não tenha item ele retorna NULL
 
     lista *aux = *head;
     *head = (*head)->prox;
-    aux->prox = NULL;
+    aux->prox = NULL; //aponta o proximo pra NULL pra não dar problema de acesso de memoria
 
     if(*head != NULL){
         (*head)->tam = aux->tam - 1;
@@ -67,22 +68,22 @@ lista* remover_inicio(lista **head){
     return aux;
 }
 
-void addlist(lista **head, unsigned char v){
+void addlist(lista **head, unsigned char v){ //Adiciona item na lista
     lista *aux, *new = (lista*) malloc(sizeof(lista));
     new->raiz = criar_arvore(v, NULL, NULL);
-    if(*head == NULL){
+    if(*head == NULL){ //Se nao tem intem na lista ele cria um
         new->prox = NULL;
         *head = new;
         (*head)->tam = 1;
     }
     else{
         aux = *head;
-        while(aux->prox != NULL && aux->raiz->valor != v){
+        while(aux->prox != NULL && aux->raiz->valor != v){ //Caminha a lista até o final ou até encontrar um item igual
             aux = aux->prox;
         }
-        if(aux->raiz->valor == v){
+        if(aux->raiz->valor == v){ //caso encontre um item igual ele incrementa a repetição
             aux->raiz->rep++;
-            free(new->raiz);
+            free(new->raiz); //como o item já existe não precisamos mais do new ent free pra nao dar problema
             free(new);
         }
         else if(aux->prox == NULL){
@@ -93,7 +94,7 @@ void addlist(lista **head, unsigned char v){
     }
 }
 
-void print_arvore(arvore *a){
+void print_arvore(arvore *a){ //printa a arvore (TBM ACHO QUE NAO VAI PRECISAR MAIS PRA FRENTE)
     if(a != NULL){
         putchar('(');
         printf("I:%X R:%d", a->valor, a->rep);
@@ -106,7 +107,7 @@ void print_arvore(arvore *a){
     }
 }
 
-void print_lista(lista *l){
+void print_lista(lista *l){ //printa os itens da lista (ACHO QUE NAO VAI PRECISAR DISSO MAIS PRA FRENTE)
     while(l != NULL){
         print_arvore(l->raiz);
         putchar('\n');
@@ -114,7 +115,7 @@ void print_lista(lista *l){
     }
 }
 
-void criararq(const char *nomedoarquivo, const char *novoarquivo, lista **list){
+void criararq(const char *nomedoarquivo, const char *novoarquivo, lista **list){ //Ainda vamos mudar isso
     FILE *file;
     FILE *new_file;
     size_t current;
@@ -170,23 +171,24 @@ void criararq(const char *nomedoarquivo, const char *novoarquivo, lista **list){
 
 }
 
-void arvore_de_huffman(lista **head){
+void arvore_de_huffman(lista **head){ //Pega os dois primeiros itens da lista e cria uma uma lista binaria com eles
     lista *primeiro, *segundo;
     while((*head)->tam > 1){
-        primeiro = remover_inicio(head);
-        segundo = remover_inicio(head);
+        primeiro = remover_inicio(head); //Pega o primeiro item da lista
+        //Como o primeiro item foi removido da lista o segundo vira o primeiro
+        segundo = remover_inicio(head); //Pega o primeiro item da lista que era o segundo
 
         lista *new = (lista*) malloc(sizeof(lista));
 
-        new->raiz = criar_arvore('\\', primeiro->raiz, segundo->raiz);
-        new->tam = ((*head) != NULL) ? (*head)->tam + 1 : 1;
+        new->raiz = criar_arvore('\\', primeiro->raiz, segundo->raiz); //Cria uma arvore que tem o primeiro e segundo item como folhas
+        new->tam = ((*head) != NULL) ? (*head)->tam + 1 : 1; 
         new->prox = *head;
         *head = new;
 
-        free(primeiro);
+        free(primeiro); //Free para evitar memory leak
         free(segundo);
 
-        insertion_sort_list(*head);
+        insertion_sort_list(*head); //insere a arvore na lista e ordena ela
     }
 }
 
