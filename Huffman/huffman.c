@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+//teste de acesso pelo github
+
 typedef struct arvore{
     void* rep;
     void* valor;
