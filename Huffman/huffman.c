@@ -5,8 +5,6 @@
 
 #define TAM 256
 
-//teste de acesso pelo github
-
 typedef struct arvore{
     void* rep;
     void* valor;
@@ -23,7 +21,7 @@ void swap(lista *a, lista *b);//Troca os ponteiros de lugar
 arvore* criar_arvore(unsigned char v, arvore *esquerda, arvore *direita);//Cria uma arvore
 lista* remover_inicio(lista **head);//remove o primeiro item da lista
 void addlist(lista **head, unsigned char v);//Adiciona item na lista
-void print_arvore(arvore *a);//printa a arvore (TBM ACHO QUE NAO VAI PRECISAR MAIS PRA FRENTE)
+void print_arvore(arvore *a, int altura);//printa a arvore (TBM ACHO QUE NAO VAI PRECISAR MAIS PRA FRENTE)
 void print_lista(lista *l); //printa os itens da lista (ACHO QUE NAO VAI PRECISAR DISSO MAIS PRA FRENTE)
 void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list);
 void arvore_de_huffman(lista **head);//Controi a árvore de Huffman
@@ -148,7 +146,7 @@ void insertion_sort_list(lista *head) { //insert_sort para listas encadeadas
     lista *i, *j;
     for (i = head; i->prox != NULL; i = i->prox) {
         for (j = i->prox; j != NULL; j = j->prox) {
-            if (i->raiz->rep > j->raiz->rep) {
+            if (*((int*)i->raiz->rep) > *((int*)j->raiz->rep)) {
                 swap(i, j); // Troca os valores
             }
         }
@@ -157,8 +155,16 @@ void insertion_sort_list(lista *head) { //insert_sort para listas encadeadas
 
 arvore* criar_arvore(unsigned char v, arvore *esquerda, arvore *direita){ //Cria uma arvore
     arvore *new = (arvore*) malloc(sizeof(arvore));
+
     new->dir = direita;
     new->esq = esquerda;
+
+    new->valor = malloc(sizeof(unsigned char));
+    new->rep = malloc(sizeof(int));
+
+    *(unsigned char*)new->valor = v;
+    *(int*)new->rep = 1;
+
     if(esquerda != NULL && direita != NULL){ //(ACHO QUE DÁ PRA FAZER ISSO MELHOR MAS N TENHO CERTEZA)
         *((int*)new->rep) = *((int*)esquerda->rep) + *((int*)direita->rep);
     }
@@ -168,11 +174,6 @@ arvore* criar_arvore(unsigned char v, arvore *esquerda, arvore *direita){ //Cria
     else if(direita != NULL){
         *((int*)new->rep) = *((int*)direita->rep);
     }
-    else{
-        *((int*)new->rep) = 1;
-    }
-    *((int*)new->valor) = v;
-
     return new;
 }
 
@@ -183,7 +184,7 @@ lista* remover_inicio(lista **head){ //remove o primeiro item da lista
 
     lista *aux = *head;
     *head = (*head)->prox;
-    (*head)->ant = NULL;
+    //(*head)->ant = NULL;
     aux->prox = NULL; //aponta o proximo pra NULL pra não dar problema de acesso de memoria
 
     if(*head != NULL){
@@ -240,13 +241,14 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
 
     //----------------------------
     //Compactação
-    printf("nkosad");
 
+    if(*list == NULL){
+        perror("Erro ao encotrar a lista");
+        free(buffer);
+    }
+
+    tail = get_tail(*list);
     insertion_sort_list(*list);
-    printf("mnioase");
-
-    print_lista(*list);
-    printf("niodsa");
 
     arvore_de_huffman(list);
 
@@ -262,6 +264,8 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
 
     tamanho = tamanho_arvore((*list)->raiz) + 1;
     trash = 8 - (strlen(codificado) % 8);
+
+    printf("%d %d", trash, tamanho);
 
     //----------------------------
     //Escrevendo o arquivo
@@ -311,70 +315,90 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
 }
 
 void arvore_de_huffman(lista **head){ //Pega os dois primeiros itens da lista e cria uma uma lista binaria com eles
-    lista *primeiro, *segundo;
-    while(*((int*)(*head)->tam) > 1){
+    lista *primeiro, *segundo, *tail;
+    while((*((int*)(*head)->tam)) > 1){
         primeiro = remover_inicio(head); //Pega o primeiro item da lista
         //Como o primeiro item foi removido da lista o segundo vira o primeiro
         segundo = remover_inicio(head); //Pega o primeiro item da lista que era o segundo
 
         lista *new = (lista*) malloc(sizeof(lista)); //Aloca mémoria para o novo item da lista
 
-        new->raiz = criar_arvore('\\', primeiro->raiz, segundo->raiz); //Cria uma arvore que tem o primeiro e segundo item como folhas
-        *((int*)new->tam) = ((*head) != NULL) ? *((int*)(*head)->tam) + 1 : 1; //Caso a lista não esteja vazia o novo tamanho é igual ao da cabeça + 1, caso contrario o tamanho é 1
+
+        new->raiz = criar_arvore('*', primeiro->raiz, segundo->raiz); //Cria uma arvore que tem o primeiro e segundo item como folhas
+
+        if (*head != NULL) {
+            *((int*)new->tam) = *((int*)(*head)->tam) + 1; 
+        } 
+        else {
+            *((int*)new->tam) = 1;
+        }//Caso a lista não esteja vazia o novo tamanho é igual ao da cabeça + 1, caso contrario o tamanho é 1
+
         new->prox = *head;
         *head = new;
 
         free(primeiro); //Free para evitar memory leak
         free(segundo);
 
-        lista *tail = get_tail(*head);
-
+        tail = get_tail(*head);
         insertion_sort_list(*head); //insere a arvore na lista e ordena ela
     }
 }
 
 void addlist(lista **head, unsigned char v){ //Adiciona item na lista
     lista *aux, *new = (lista*) malloc(sizeof(lista));
+    if(new == NULL){
+        perror("Erro ao alocar memoria para lista");
+        return;
+    }
+
     new->raiz = criar_arvore(v, NULL, NULL);
+    
+    new->tam = malloc(sizeof(int));
+    if(new->tam == NULL){
+        perror("Erro ao alocar memoria para tamanho");
+        free(new->raiz);
+        free(new);
+        return;
+    }
+
+    int tamanho = *((int*)new->tam);
+
     if(*head == NULL){ //Se nao tem item na lista ele cria um
         new->prox = NULL;
-        new->ant = NULL;
+        //new->ant = NULL;
         *head = new;
-        *((int*)(*head)->tam) = 1;
+        tamanho = 1;
     }
     else{
         aux = *head;
-        while(aux->prox != NULL && *((int*)aux->raiz->valor) != v){ //Caminha a lista até o final ou até encontrar um item igual
+        while(aux->prox != NULL && *((unsigned char*)aux->raiz->valor) != v){ //Caminha a lista até o final ou até encontrar um item igual
             aux = aux->prox;
         }
-        if(*((int*)aux->raiz->valor) == v){ //caso encontre um item igual ele incrementa a repetição
-            aux->raiz->rep++;
+        if(*((unsigned char*)aux->raiz->valor) == v){ //caso encontre um item igual ele incrementa a repetição
+            (*(int*)aux->raiz->rep)++;
+            free(new->raiz->valor);
+            free(new->raiz->rep);
+            free(new->tam);
             free(new->raiz); //como o item já existe não precisamos mais do new ent free pra nao dar problema
             free(new);
         }
         else if(aux->prox == NULL){
             aux->prox = new;
             new->prox = NULL;
-            new->ant = aux;
-            (*head)->tam++;
+            //new->ant = aux;
+            tamanho++;
         }
     }
 }
 
-void print_lista(lista *l){ //printa os itens da lista (ACHO QUE NAO VAI PRECISAR DISSO MAIS PRA FRENTE)
-    while(l != NULL){
-        print_arvore(l->raiz);
-        putchar('\n');
-        l = l->prox;
-    }
-}
-
-void print_arvore(arvore *a){ //printa a arvore (TBM ACHO QUE NAO VAI PRECISAR MAIS PRA FRENTE)
+void print_arvore(arvore *a, int altura){
     if(a != NULL){
+        //printf(" P:%p", a);
         putchar('(');
-        printf("I:%X R:%d", *((int*)a->valor), *((int*)a->rep));
-        print_arvore(a->esq);
-        print_arvore(a->dir);
+        printf("I:%C R:%d A:%d", *((unsigned char*)a->valor), *((int*)a->rep), altura);
+        altura++;
+        print_arvore(a->esq, altura);
+        print_arvore(a->dir, altura);
         putchar(')');
     }
     else{
@@ -382,11 +406,20 @@ void print_arvore(arvore *a){ //printa a arvore (TBM ACHO QUE NAO VAI PRECISAR M
     }
 }
 
+void print_lista(lista *l){
+    int i = 0;
+    while(l != NULL){
+        print_arvore(l->raiz, i);
+        putchar('\n');
+        l = l->prox;
+    }
+}
+
 void criar_dicionario(char **dicionario, arvore *raiz, char *caminho, int profundidade){ //Cria o novo dicionario a parti da árvore de Huffman
     char esquerda[profundidade], direita[profundidade];
     
     if(raiz->dir == NULL && raiz->esq == NULL){ //Caso o nó seja uma folha ele adicona ao dicionario o novo valor para o valor da folha Ex: A = 01 ao inves de A = 0100 0001
-        strcpy(dicionario[*(int*)raiz->valor], caminho);
+        strcpy(dicionario[*(unsigned char*)raiz->valor], caminho);
     }
     else{
         strcpy(esquerda, caminho); //Copia a string do caminho para a string da esquerda
