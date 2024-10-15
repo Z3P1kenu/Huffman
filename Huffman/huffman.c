@@ -265,8 +265,6 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     tamanho = tamanho_arvore((*list)->raiz) + 1;
     trash = 8 - (strlen(codificado) % 8);
 
-    printf("%d %d", trash, tamanho);
-
     //----------------------------
     //Escrevendo o arquivo
 
