@@ -1,67 +1,82 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX 3 //Ordem da árvore B (máximo de chaves por nó)
-#define MIN 2 //Mínimo de chaves por nó
+#define MAX 3 //ordem da árvore B (máximo de chaves por nó)
+#define MIN 2 //mínimo de chaves por nó
 
 typedef struct BTreeNode {
-    int keys[MAX];
-    struct BTreeNode *children[MAX + 1];
-    int count; //Número atual de chaves no nó
+    int keys[MAX]; //elementos de cada nó (também podem ser chamados de chaves)
+    struct BTreeNode *children[MAX + 1]; //pode ter no MAX + 1 chaves pois podem existir números maiores que a maior chave da página
+    int count; //número atual de chaves no nó
     int leaf;  //1 se for folha, 0 caso contrário
 } BTreeNode;
 
 BTreeNode *createNode(int leaf) {
-    BTreeNode *node = (BTreeNode *)malloc(sizeof(BTreeNode));
-    node->leaf = leaf;
-    node->count = 0;
+    BTreeNode *node = (BTreeNode *)malloc(sizeof(BTreeNode));//alocação de memoria para o nodo
+    node->leaf = leaf;//ser for 1 é folha, se for 0 não é
+    node->count = 0;//número atual de folhas de cada página
     for (int i = 0; i < MAX + 1; i++) {
-        node->children[i] = NULL;
+        node->children[i] = NULL; //criação dos intervalos entre cada chave
     }
     return node;
 }
 
+//função pra dividir um filho se o nó estiver cheio durante a inserção
 void splitChild(BTreeNode *parent, int i, BTreeNode *child) {
+
+    //cria um novo nó que vai receber metade das chaves do nó filho
     BTreeNode *newNode = createNode(child->leaf);
+    //define o número de chaves que o nó terá (MIN - 1 pois o array conta 0 como um número)
     newNode->count = MIN - 1;
 
-    //Copiar as últimas chaves de child para newNode
+    //copiar as últimas chaves de child para o novo nó
+    //nesse caso, copia 1 chave já que o min - 1 é 2
     for (int j = 0; j < MIN - 1; j++) {
         newNode->keys[j] = child->keys[j + MIN];
     }
 
-    //Se child não for folha, copiar os últimos filhos de child para newNode
+    //se o nó não for folha, precisamos copiar seus filhos
     if (!child->leaf) {
+
+        //copia os últimos MIN filhos do nó filho para o novo nó
+        //nesse caso copia o filho 1 e o filho 2
         for (int j = 0; j < MIN; j++) {
             newNode->children[j] = child->children[j + MIN];
         }
     }
 
+    //agora que copiamos tudo, reduzimos o número de filhos do nó para min - 1 de novp
     child->count = MIN - 1;
 
-    //Mover os filhos de parent para a direita para abrir espaço para o novo filho
+    //abre espaço no nó pai para o novo filho
     for (int j = parent->count; j >= i + 1; j--) {
         parent->children[j + 1] = parent->children[j];
     }
 
-    //Colocar newNode como filho de parent
+    //move todos os filhos uma posição para a direita a partir da posição de i+1
     parent->children[i + 1] = newNode;
 
-    //Mover as chaves de parent para a direita para abrir espaço para a chave mediana
+    //mover as chaves de parent para a direita para abrir espaço para a chave mediana
     for (int j = parent->count - 1; j >= i; j--) {
         parent->keys[j + 1] = parent->keys[j];
     }
 
-    //Colocar a chave mediana de child em parent
+    //colocar a chave mediana de child em parent
     parent->keys[i] = child->keys[MIN - 1];
     parent->count++;
 }
+
+
+
+//comentar mais do código a partir daqui
+
+
 
 void insertNonFull(BTreeNode *node, int key) {
     int i = node->count - 1;
 
     if (node->leaf) {
-        //Inserir a nova chave na posição correta
+        //inserir a nova chave na posição correta
         while (i >= 0 && key < node->keys[i]) {
             node->keys[i + 1] = node->keys[i];
             i--;
@@ -69,7 +84,7 @@ void insertNonFull(BTreeNode *node, int key) {
         node->keys[i + 1] = key;
         node->count++;
     } else {
-        //Encontrar o filho que deverá receber a nova chave
+        //encontrar o filho que deverá receber a nova chave
         while (i >= 0 && key < node->keys[i]) {
             i--;
         }
@@ -114,8 +129,9 @@ void traverse(BTreeNode *root) {
 }
 
 int main() {
-    BTreeNode *root = createNode(1); //Criar uma árvore B vazia
+    BTreeNode *root = createNode(1); //criar a árvore vazia
 
+    //exemplo de árvore para demonstrar na apresentação adicionando mais um número
     insert(&root, 10);
     insert(&root, 20);
     insert(&root, 5);
