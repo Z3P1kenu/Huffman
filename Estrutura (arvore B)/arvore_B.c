@@ -48,33 +48,32 @@ void splitChild(BTreeNode *parent, int i, BTreeNode *child) {
     //agora que copiamos tudo, reduzimos o número de filhos do nó para min - 1 de novp
     child->count = MIN - 1;
 
-    //abre espaço no nó pai para o novo filho
+    //abre espaço no nó pai para o novo filho movendo todos os outros para a direita a partir da posição i+1
     for (int j = parent->count; j >= i + 1; j--) {
         parent->children[j + 1] = parent->children[j];
     }
 
-    //move todos os filhos uma posição para a direita a partir da posição de i+1
+    //conecta o novo nó na posição i+1
     parent->children[i + 1] = newNode;
 
-    //mover as chaves de parent para a direita para abrir espaço para a chave mediana
+    //abrindo espaço no nó pai para todas as chaves
+    //move todas as chaves para uma posição a direita a partir da posição i
     for (int j = parent->count - 1; j >= i; j--) {
         parent->keys[j + 1] = parent->keys[j];
     }
 
-    //colocar a chave mediana de child em parent
+    //a chave do nó filho (posição MIN - 1) sobre para o pai (vira um dos filhos do pai)
     parent->keys[i] = child->keys[MIN - 1];
+    //aumenta o número de chaves no nó pai
     parent->count++;
 }
 
-
-
-//comentar mais do código a partir daqui
-
-
-
+//função de inserir quando o nodo do respectivo número não está cheio
 void insertNonFull(BTreeNode *node, int key) {
+    //o int i é a quantidade de chaves - 1 pois queremos utilizar nos arrays
     int i = node->count - 1;
 
+    //se o nodo for uma folha nós apenas colocamos ele na posição certa
     if (node->leaf) {
         //inserir a nova chave na posição correta
         while (i >= 0 && key < node->keys[i]) {
@@ -90,13 +89,17 @@ void insertNonFull(BTreeNode *node, int key) {
         }
         i++;
 
+        //se o filho estiver cheio, realiza o split antes de inserir
         if (node->children[i]->count == MAX) {
             splitChild(node, i, node->children[i]);
 
+            //após o split mostra em qual filho a chave deve ser inserida
             if (key > node->keys[i]) {
                 i++;
             }
         }
+
+        //insere o filho de maneira recursiva
         insertNonFull(node->children[i], key);
     }
 }
@@ -104,27 +107,38 @@ void insertNonFull(BTreeNode *node, int key) {
 void insert(BTreeNode **root, int key) {
     BTreeNode *r = *root;
 
+    //se a raiz estiver cheia, cria uma nova raiz
     if (r->count == MAX) {
         BTreeNode *newRoot = createNode(0);
         newRoot->children[0] = r;
+        //divide a raiz antiga e insere a chave
         splitChild(newRoot, 0, r);
         insertNonFull(newRoot, key);
         *root = newRoot;
     } else {
+        //se a raiz não estiver cheia insere diretamente
         insertNonFull(r, key);
     }
 }
 
+//função que printa em ordem (comicamente foi a que mais deu trabalho)
 void traverse(BTreeNode *root) {
+
     int i;
+
+    //para cada chave do nó
     for (i = 0; i < root->count; i++) {
         if (!root->leaf) {
+            //se não for folha, visita o filho à esquerda
             traverse(root->children[i]);
         }
+        //printa o filho atual
         printf("%d ", root->keys[i]);
     }
+
+    //se não for folha visita o filho mais a direita
     if (!root->leaf) {
-        traverse(root->children[i]);    
+        traverse(root->children[i]);
     }
 }
 
@@ -141,7 +155,7 @@ int main() {
     insert(&root, 7);
     insert(&root, 17);
 
-    printf("Travessia da árvore B:\n");
+    printf("Travessia da árvore B:\n"); //só pra ser bonitinho
     traverse(root);
     printf("\n");
 
