@@ -21,6 +21,239 @@ BTreeNode *createNode(int leaf) {
     return node;
 }
 
+
+
+// Função auxiliar para encontrar o índice da primeira chave maior ou igual a k
+int findKey(BTreeNode *node, int k) {
+    int idx = 0;
+    while (idx < node->count && node->keys[idx] < k)
+        idx++;
+    return idx;
+}
+
+// Função de busca na árvore B
+BTreeNode* search(BTreeNode *root, int k) {
+    int i = findKey(root, k);
+    
+    // Se encontrou a chave no nó atual
+    if (i < root->count && root->keys[i] == k)
+        return root;
+        
+    // Se é uma folha e não encontrou, a chave não existe
+    if (root->leaf)
+        return NULL;
+        
+    // Recursivamente busca no filho apropriado
+    return search(root->children[i], k);
+}
+
+// Função auxiliar para pegar o predecessor
+int getPred(BTreeNode *node, int idx) {
+    BTreeNode *curr = node->children[idx];
+    while (!curr->leaf)
+        curr = curr->children[curr->count];
+    return curr->keys[curr->count - 1];
+}
+
+// Função auxiliar para pegar o sucessor
+int getSucc(BTreeNode *node, int idx) {
+    BTreeNode *curr = node->children[idx + 1];
+    while (!curr->leaf)
+        curr = curr->children[0];
+    return curr->keys[0];
+}
+
+// Função auxiliar para preencher o filho na posição idx
+void fillChild(BTreeNode *node, int idx) {
+    // Tenta pegar uma chave do irmão à esquerda
+    if (idx != 0 && node->children[idx-1]->count >= MIN) {
+        BTreeNode *child = node->children[idx];
+        BTreeNode *sibling = node->children[idx-1];
+        
+        // Move todas as chaves em child um passo à direita
+        for (int i = child->count-1; i >= 0; --i)
+            child->keys[i+1] = child->keys[i];
+            
+        // Se não for folha, move também os filhos
+        if (!child->leaf) {
+            for (int i = child->count; i >= 0; --i)
+                child->children[i+1] = child->children[i];
+        }
+        
+        // Copia a chave do pai para o child
+        child->keys[0] = node->keys[idx-1];
+        
+        // Move a última chave do irmão para o pai
+        node->keys[idx-1] = sibling->keys[sibling->count-1];
+        
+        // Move o último filho do irmão para child
+        if (!child->leaf)
+            child->children[0] = sibling->children[sibling->count];
+            
+        child->count += 1;
+        sibling->count -= 1;
+    }
+    
+    // Tenta pegar uma chave do irmão à direita
+    else if (idx != node->count && node->children[idx+1]->count >= MIN) {
+        BTreeNode *child = node->children[idx];
+        BTreeNode *sibling = node->children[idx+1];
+        
+        // Copia a chave do pai para o child
+        child->keys[child->count] = node->keys[idx];
+        
+        // Move a primeira chave do irmão para o pai
+        node->keys[idx] = sibling->keys[0];
+        
+        // Se não for folha, move também o primeiro filho do irmão
+        if (!child->leaf)
+            child->children[child->count+1] = sibling->children[0];
+            
+        // Move todas as chaves do irmão um passo à esquerda
+        for (int i = 1; i < sibling->count; ++i)
+            sibling->keys[i-1] = sibling->keys[i];
+            
+        // Se não for folha, move também os filhos
+        if (!sibling->leaf) {
+            for (int i = 1; i <= sibling->count; ++i)
+                sibling->children[i-1] = sibling->children[i];
+        }
+        
+        child->count += 1;
+        sibling->count -= 1;
+    }
+    
+    // Merge com o irmão
+    else {
+        if (idx != node->count)
+            merge(node, idx);
+        else
+            merge(node, idx-1);
+    }
+}
+
+// Função auxiliar para fazer merge de nós
+void merge(BTreeNode *node, int idx) {
+    BTreeNode *child = node->children[idx];
+    BTreeNode *sibling = node->children[idx+1];
+    
+    // Copia a chave do pai para child
+    child->keys[MIN-1] = node->keys[idx];
+    
+    // Copia as chaves de sibling para child
+    for (int i = 0; i < sibling->count; ++i)
+        child->keys[i+MIN] = sibling->keys[i];
+        
+    // Se não for folha, copia os filhos também
+    if (!child->leaf) {
+        for (int i = 0; i <= sibling->count; ++i)
+            child->children[i+MIN] = sibling->children[i];
+    }
+    
+    // Move as chaves do nó um passo à esquerda
+    for (int i = idx+1; i < node->count; ++i)
+        node->keys[i-1] = node->keys[i];
+        
+    // Move os filhos correspondentes
+    for (int i = idx+2; i <= node->count; ++i)
+        node->children[i-1] = node->children[i];
+        
+    child->count += sibling->count + 1;
+    node->count--;
+    
+    free(sibling);
+}
+
+// Função principal de remoção
+void removeKey(BTreeNode **root, int k) {
+    BTreeNode *r = *root;
+    
+    if (!r) {
+        printf("A árvore está vazia!\n");
+        return;
+    }
+    
+    removeFromNode(r, k);
+    
+    // Se a raiz ficou vazia
+    if (r->count == 0) {
+        BTreeNode *tmp = r;
+        if (r->leaf)
+            *root = NULL;
+        else
+            *root = r->children[0];
+        free(tmp);
+    }
+}
+
+// Função auxiliar que remove a chave de um nó
+void removeFromNode(BTreeNode *node, int k) {
+    int idx = findKey(node, k);
+    
+    // Se a chave está presente neste nó
+    if (idx < node->count && node->keys[idx] == k) {
+        if (node->leaf)
+            removeFromLeaf(node, idx);
+        else
+            removeFromNonLeaf(node, idx);
+    }
+    else {
+        // Se este é um nó folha, a chave não existe na árvore
+        if (node->leaf) {
+            printf("A chave %d não existe na árvore!\n", k);
+            return;
+        }
+        
+        // A chave a ser removida está presente no sub-árvore com raiz em node->children[idx]
+        bool flag = (idx == node->count);
+        
+        // Se o filho onde a chave supostamente existe tem menos que MIN chaves
+        if (node->children[idx]->count < MIN)
+            fillChild(node, idx);
+            
+        // Se o último filho foi merged
+        if (flag && idx > node->count)
+            removeFromNode(node->children[idx-1], k);
+        else
+            removeFromNode(node->children[idx], k);
+    }
+}
+
+// Remove a chave de um nó folha
+void removeFromLeaf(BTreeNode *node, int idx) {
+    // Move todas as chaves depois de idx um passo para trás
+    for (int i = idx+1; i < node->count; ++i)
+        node->keys[i-1] = node->keys[i];
+        
+    node->count--;
+}
+
+// Remove a chave de um nó não-folha
+void removeFromNonLeaf(BTreeNode *node, int idx) {
+    int k = node->keys[idx];
+    
+    // Se o filho que precede k tem pelo menos MIN chaves
+    if (node->children[idx]->count >= MIN) {
+        int pred = getPred(node, idx);
+        node->keys[idx] = pred;
+        removeFromNode(node->children[idx], pred);
+    }
+    
+    // Se o filho que sucede k tem pelo menos MIN chaves
+    else if (node->children[idx+1]->count >= MIN) {
+        int succ = getSucc(node, idx);
+        node->keys[idx] = succ;
+        removeFromNode(node->children[idx+1], succ);
+    }
+    
+    // Se ambos os filhos têm menos que MIN chaves
+    else {
+        merge(node, idx);
+        removeFromNode(node->children[idx], k);
+    }
+}
+
+
 //função pra dividir um filho se o nó estiver cheio durante a inserção
 void splitChild(BTreeNode *parent, int i, BTreeNode *child) {
 
