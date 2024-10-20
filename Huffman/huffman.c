@@ -87,9 +87,7 @@ int main() {
         //Fazendo ainda
         printf("Insira o nome do arquivo compactado:");
         fgets(nomedoarquivo, TAM, stdin);
-        nomedoarquivo[strcspn(nomedoarquivo, "\n")] = '.';
-        strcat(nomedoarquivo, "watts");
-        printf("%s", nomedoarquivo);
+        nomedoarquivo[strcspn(nomedoarquivo, "\n")] = '\0';
 
         printf("Insira o nome para o novo arquivo com extensão (Ex: imagem.png, Aula_20_-_Huffman.pdf):");
         fgets(novoarquivo, TAM, stdin);
@@ -214,9 +212,11 @@ void print_arvore(arvore *a, int altura){
     if(a != NULL){
         //printf(" P:%p", a);
         putchar('(');
-        printf("I:%C R:%d A:%d", *((unsigned char*)a->valor), *((int*)a->rep), altura);
+        printf("I:%C", *((unsigned char*)a->valor));
         altura++;
+        printf("E:");
         print_arvore(a->esq, altura);
+        printf("DIR:");
         print_arvore(a->dir, altura);
         putchar(')');
     }
@@ -278,16 +278,15 @@ void criar_dicionario(char **dicionario, arvore *raiz, char *caminho, int profun
 }
 
 void escrever_arvore(FILE *arquivo, arvore *raiz){
-    unsigned char folha; //Variavel para saber se o nó é uma folha ou não
 
-    if(raiz->dir == NULL && raiz->esq == NULL){ //Caso o nó seja uma folha ele escreve um byte 1 após o valor (Não deve ser o jeito mais eficiente já que adiciona um byte inteiro oq custa mais mémoria)
-        /*if((*((unsigned char*)raiz->valor) == '*' || *((unsigned char*)raiz->valor) == '\\')){
+    if(raiz->dir == NULL && raiz->esq == NULL){ //
+        if((*((unsigned char*)raiz->valor) == '*' || *((unsigned char*)raiz->valor) == '\\')){
             fwrite((unsigned char*)('\\'), sizeof(unsigned char), 1, arquivo);
             fwrite((unsigned char*)raiz->valor, sizeof(unsigned char), 1, arquivo);
         }
-        else{*/
+        else{
             fwrite(((unsigned char*)raiz->valor), sizeof(unsigned char), 1, arquivo); //Escreve o valor da raiz no cabeçalho
-        //}
+        }
     }
     else{ //Caso não ele escreve um byte 0
         fwrite(((unsigned char*)raiz->valor), sizeof(unsigned char), 1, arquivo); //Escreve o valor da raiz no cabeçalho
@@ -633,90 +632,64 @@ void descompactar(const char *nomedoarquivo, const char *novoarquivo, lista **li
     }
 
     uint16_t metadados = (uint16_t) (buffer[0] << 8) | buffer[1];
-    //metadados = swap_uint16(metadados);
     trash = (buffer[0] >> 5);
     tamanho = metadados & 0x1FFF;
-    printf("%d %d %d %d %d\n",buffer[1], buffer[0], metadados, trash, tamanho);
 
     huff = ler_arvore(buffer + 2, tamanho);
 
     print_arvore(huff, 0);
+    putchar('\n');
 
-    fclose(file);
-
-/*
-    for(long i=0; i < filesize; i++){ //Adiciona o conteudo do arquivo na lista
-        addlist(list, buffer[i]);
-    }
-
-    //----------------------------
-    //Compactação
-
-    if(*list == NULL){
-        perror("Erro ao encotrar a lista");
-        free(buffer);
-    }
-
-    quick_sort_linked_list(list);
-
-    arvore_de_huffman(list);
-
-    profundidade = altura((*list)->raiz);
-
-    dicionario = alocar_dicionario(profundidade);
-    criar_dicionario(dicionario, (*list)->raiz, "", profundidade);
-
-    codificado = calloc(filesize * 8 + 1, sizeof(unsigned char));
-    for(long i = 0; i < filesize; i++){
-        strcat(codificado, dicionario[buffer[i]]);
-    }
-
-    tamanho = tamanho_arvore((*list)->raiz) + 1;
-    trash = 8 - (strlen(codificado) % 8);
-
-    //----------------------------
-    //Escrevendo o arquivo
-
-    new_file = fopen(novoarquivo, "wb"); //Abre o novo arquivo em modo de escrida
-    if(new_file == NULL){ //Tratamento de erro
-        perror("Erro ao escrever o arquivo: ");
-        free(buffer);
+    new_file = fopen(novoarquivo, "wb");
+    if (new_file == NULL) {
+        perror("Error opening output file");
         fclose(new_file);
-        free(codificado);
-        for (int i = 0; i < TAM; i++) {
-            free(dicionario[i]);
-        }
-        free(dicionario);
         return;
     }
 
-    escrever_metadados(new_file, tamanho, trash); //Escreve o cabeçalho
 
-    escrever_arvore(new_file, (*list)->raiz); //Escreve a árvore
-
-    for(long i = 0; i < strlen(codificado); i++){ //Escreve o código novo
-        buffer_saida = (buffer_saida << 1) | (codificado[i] - '0'); //Desloca o buffer para a esquerda e seta o novo bit
-        bit_no_buffer++;
-
-        if(bit_no_buffer == 8){ //Quando tem um byte escreve no arquivo novo
-            fwrite(&buffer_saida, sizeof(unsigned char), 1, new_file);
-            buffer_saida = 0;
-            bit_no_buffer = 0;
+    arvore *aux = huff;
+    unsigned char byte;
+    for(long i = tamanho + 2; i < filesize; i++) {
+        byte = buffer[i];
+        printf("\t\t%d %d\n", byte, i);
+        printf("ENTROU\n");
+        if(i < filesize - 1){
+            for (int i = 7; i >= 0; i--) {
+                if ((byte & (1 << i)) != 0) {
+                    printf("\tDIR\n");
+                    aux = aux->dir;
+                } else {
+                    printf("\tESQ\n");
+                    aux = aux->esq;
+                }
+                
+                if (aux->esq == NULL && aux->dir == NULL) {
+                    printf("FOIA\n");
+                    printf("%c", *(unsigned char*)aux->valor);
+                    fwrite(aux->valor, 1, 1, new_file);
+                    aux = huff; 
+                }
+            }
+        }
+        else{
+            for (int i = 7; i >= trash; i--) {
+                if ((byte & (1 << i)) != 0) {
+                    printf("\tDIR\n");
+                    aux = aux->dir;
+                } else {
+                    printf("\tESQ\n");
+                    aux = aux->esq;
+                }
+                
+                if (aux->esq == NULL && aux->dir == NULL) {
+                    printf("FOIA\n");
+                    printf("%c", *(unsigned char*)aux->valor);
+                    fwrite(aux->valor, 1, 1, new_file);
+                    aux = huff; 
+                }
+            }
         }
     }
 
-    if(bit_no_buffer > 0){ //Escreve os bits que não conseguiram formar um byte com as casas que faltaram 0
-        buffer_saida <<= (8 - bit_no_buffer);
-        fwrite(&buffer_saida, sizeof(unsigned char), 1, new_file);
-    }
-
-    free(buffer);
-    fclose(new_file);
-    fclose(file);
-    free(codificado);
-    for (int i = 0; i < TAM; i++) {
-        free(dicionario[i]);
-    }
-    free(dicionario);
-    */
 }
