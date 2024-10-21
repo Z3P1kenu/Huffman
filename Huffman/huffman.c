@@ -24,12 +24,12 @@ lista* remover_inicio(lista **head);//remove o primeiro item da lista
 int altura(arvore *raiz);//Retorna o caminho da raiz até a folha mais distante
 int tamanho_arvore(arvore *raiz);//Retorna o tamanho da árvore
 char** alocar_dicionario(int profundidade);//Aloca mémoria para fazer o dicionario
-void addlist(lista **head, unsigned char v);//Adiciona item na lista
+void addlist(lista **head, unsigned char v, int r);//Adiciona item na lista
 void arvore_de_huffman(lista **head);//Controi a árvore de Huffman
 void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list);
 void descompactar(const char *nomedoarquivo, const char *novoarquivo, lista **list);
 void criar_dicionario(char **dicionario, arvore *raiz, char *caminho, int profundidade);//Cria o dicionario
-void escrever_arvore(FILE *arquivo, arvore *raiz);//Escreve a árvore em preordem no cabeçalho
+void escrever_arvore(FILE *arquivo, arvore *raiz, int *tam);//Escreve a árvore em preordem no cabeçalho
 void escrever_metadados(FILE *arquivo, uint16_t arv_tam, uint8_t padding);//Escreve o cabeçalho com o trash e o tamanho da arvore
 //void ler_metadados(FILE *arquivo, uint16_t *tam, uint8_t *trash); //AINDA EM PRODUÇÃO
 void print_arvore(arvore *a, int altura);//printa a arvore (TBM ACHO QUE NAO VAI PRECISAR MAIS PRA FRENTE)
@@ -95,6 +95,8 @@ int main() {
 
         descompactar(nomedoarquivo, novoarquivo, &list);
 
+        printf("Arquivo %s criado", novoarquivo);
+
         break;
     default:
         break;
@@ -121,34 +123,26 @@ void escrever_metadados(FILE *arquivo, uint16_t arv_tam, uint8_t padding){
     fwrite(&metadados, sizeof(uint16_t), 1, arquivo); //Escreve o cabeçalho no arquivo
 }
 
-lista* get_tail(lista *head) { //Retorna o ultimo item da lista
-    printf("\t\t1\n");
+lista* get_tail(lista *head) {
     lista *aux = head;
-    while (aux->prox != NULL) {
+    while (aux != NULL && aux->prox != NULL) {
         aux = aux->prox;
     }
-    printf("\t\t1\n");
     return aux;
 }
 
 void quick_sort_linked_list(lista** head) {
-    printf("\t\t1\n");
     if (*head == NULL || (*head)->prox == NULL)
         return;
-printf("\t\t1\n");
+
     lista* last = get_tail(*head);
-    printf("\t\t1\n");
     quick_sort(*head, last);
 }
 
 void quick_sort(lista *low, lista *high) {
-    printf("\t\t1\n");
     if (high != NULL && low != high && low != high->prox) {
-        printf("\t\t1\n");
         lista *pivot = partition(low, high);
-        printf("\t\t1\n");
         quick_sort(low, pivot->ant);
-        printf("\t\t1\n");
         quick_sort(pivot->prox, high);
     }
 }
@@ -277,40 +271,44 @@ void criar_dicionario(char **dicionario, arvore *raiz, char *caminho, int profun
     }
 }
 
-void escrever_arvore(FILE *arquivo, arvore *raiz){
-
+void escrever_arvore(FILE *arquivo, arvore *raiz, int *tam){
+    printf("%c\n", *((unsigned char*)raiz->valor));
     if(raiz->dir == NULL && raiz->esq == NULL){ //
         if((*((unsigned char*)raiz->valor) == '*' || *((unsigned char*)raiz->valor) == '\\')){
-            fwrite((unsigned char*)('\\'), sizeof(unsigned char), 1, arquivo);
+            unsigned char barra = '\\';
+            fwrite(&barra, sizeof(unsigned char), 1, arquivo);
+            (*tam)++;
             fwrite((unsigned char*)raiz->valor, sizeof(unsigned char), 1, arquivo);
         }
         else{
             fwrite(((unsigned char*)raiz->valor), sizeof(unsigned char), 1, arquivo); //Escreve o valor da raiz no cabeçalho
         }
     }
-    else{ //Caso não ele escreve um byte 0
+    else{ //
         fwrite(((unsigned char*)raiz->valor), sizeof(unsigned char), 1, arquivo); //Escreve o valor da raiz no cabeçalho
 
-        escrever_arvore(arquivo, raiz->esq); //Chama a função recursivamente. Chama o filho da esquerda primeiro para ser escrido em preordem
-        escrever_arvore(arquivo, raiz->dir);
+        escrever_arvore(arquivo, raiz->esq, tam); //Chama a função recursivamente. Chama o filho da esquerda primeiro para ser escrido em preordem
+        escrever_arvore(arquivo, raiz->dir, tam);
     }
 }
 
 arvore* ler_arvore(unsigned char *buffer, int tamanho) {
     static int posicao = 0;
+    printf("%c\n", buffer[posicao]);
     
     if (posicao >= tamanho) {
         return NULL;
     }
 
     arvore *no = criar_arvore('\0', NULL, NULL);
-    if (buffer[posicao] == '*') {
+    if (buffer[posicao] == '*'){
         posicao++;
         no->valor = malloc(sizeof(unsigned char));
         *(unsigned char*)no->valor = '*';
         no->esq = ler_arvore(buffer, tamanho);
         no->dir = ler_arvore(buffer, tamanho);
-    } else {
+    } 
+    else{
         if (buffer[posicao] == '\\') {
             posicao++;
             if (posicao >= tamanho) {
@@ -327,26 +325,23 @@ arvore* ler_arvore(unsigned char *buffer, int tamanho) {
 }
 
 lista* partition(lista *low, lista *high) {
-    printf("\t\t3A\n");
     int pivot = *(int*)(high->raiz->rep);
     lista *i = low->ant;
+    
     for (lista *j = low; j != high; j = j->prox) {
-        printf("\t\t3B\n");
         if (*(int*)(j->raiz->rep) <= pivot) {
-            if (i == NULL) {
+            if (i == NULL)
                 i = low;
-            } else {
+            else
                 i = i->prox;
-            }
             swap(i, j);
         }
     }
-    printf("\t\t3C\n");
-    if (i == NULL) {
+    
+    if (i == NULL)
         i = low;
-    } else {
+    else
         i = i->prox;
-    }
     swap(i, high);
     return i;
 }
@@ -375,7 +370,7 @@ arvore* criar_arvore(unsigned char v, arvore *esquerda, arvore *direita){ //Cria
     return new;
 }
 
-void addlist(lista **head, unsigned char v){ //Adiciona item na lista
+void addlist(lista **head, unsigned char v, int r){ //Adiciona item na lista
     lista *aux, *new = (lista*) malloc(sizeof(lista));
     if(new == NULL){
         perror("Erro ao alocar memoria para lista");
@@ -383,6 +378,7 @@ void addlist(lista **head, unsigned char v){ //Adiciona item na lista
     }
 
     new->raiz = criar_arvore(v, NULL, NULL);
+    *((int*)new->raiz->rep) = r;
     
     new->tam = malloc(sizeof(int));
     if(new->tam == NULL){
@@ -399,24 +395,10 @@ void addlist(lista **head, unsigned char v){ //Adiciona item na lista
         *((int*)new->tam) = 1;
     }
     else{
-        aux = *head;
-        while(aux->prox != NULL && *((unsigned char*)aux->raiz->valor) != v){ //Caminha a lista até o final ou até encontrar um item igual
-            aux = aux->prox;
-        }
-        if(*((unsigned char*)aux->raiz->valor) == v){ //caso encontre um item igual ele incrementa a repetição
-            (*(int*)aux->raiz->rep)++;
-            free(new->raiz->valor);
-            free(new->raiz->rep);
-            free(new->tam);
-            free(new->raiz); //como o item já existe não precisamos mais do new ent free pra nao dar problema
-            free(new);
-        }
-        else if(aux->prox == NULL){
-            aux->prox = new;
-            new->prox = NULL;
-            //new->ant = aux;
-            *((int*)(*head)->tam) = *((int*)(*head)->tam) + 1;
-        }
+        new->prox = (*head);
+        new->ant = NULL;
+        *((int*)new->tam) = (*(int*)(*head)->tam)++;
+        (*head) = new;
     }
 }
 
@@ -450,7 +432,7 @@ void arvore_de_huffman(lista **head){ //Pega os dois primeiros itens da lista e 
         free(primeiro); //Free para evitar memory leak
         free(segundo);
 
-        insertion_sort_list(*head); //insere a arvore na lista e ordena ela
+        quick_sort_linked_list(head);//insere a arvore na lista e ordena ela
     }
 }
 
@@ -496,10 +478,24 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
         return;
     }
 
+    int *repeticoes[TAM]; 
+    if(repeticoes == NULL){ //Tratamento de erro
+        perror("Erro ao alocar mémoria: ");
+        free(buffer);
+        fclose(file);
+        return;
+    }
 
     for(long i=0; i < filesize; i++){ //Adiciona o conteudo do arquivo na lista
-        addlist(list, buffer[i]);
+        repeticoes[buffer[i]]++;
     }
+
+    for(int i = 0; i < TAM; i++){
+        if(repeticoes[i] > 0){
+            addlist(list, i, *repeticoes[i]);
+        }
+    }
+    printf("%p", list);
 
     //----------------------------
     //Compactação
@@ -510,7 +506,7 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     }
     
 
-    insertion_sort_list(*list);
+    quick_sort_linked_list(list);
 
 
     arvore_de_huffman(list);
@@ -541,9 +537,10 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     //Reservar espaço para os metadados
     fseek(new_file, sizeof(uint16_t), SEEK_SET);
 
-    print_lista(*list);
-
-    escrever_arvore(new_file, (*list)->raiz);
+    //print_lista(*list);
+    int sobra = 0;
+    escrever_arvore(new_file, (*list)->raiz, &sobra);
+    printf("%d", sobra);
 
     unsigned char bit_buffer = 0;
     int bit_count = 0;
@@ -552,6 +549,7 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     for(long i = 0; i < filesize; i++) {
         char *code = dicionario[buffer[i]];
         for(int j = 0; code[j]; j++) {
+            printf("ENTROU");
             if(code[j] == '1') {
                 bit_buffer |= (1 << (7 - bit_count));
             }
@@ -572,7 +570,7 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     }
 
     // Calcular e escrever os metadados
-    tamanho = tamanho_arvore((*list)->raiz) + 1;
+    tamanho = tamanho_arvore((*list)->raiz) + 1 + sobra;
     trash = (8 - (total_bits % 8)) % 8;
     uint16_t metadados = (trash << 13) | tamanho;
     metadados = swap_uint16(metadados);
@@ -650,23 +648,25 @@ void descompactar(const char *nomedoarquivo, const char *novoarquivo, lista **li
 
     arvore *aux = huff;
     unsigned char byte;
+    int porcent;
     for(long i = tamanho + 2; i < filesize; i++) {
         byte = buffer[i];
-        printf("\t\t%d %d\n", byte, i);
-        printf("ENTROU\n");
+        porcent = (((i + 1)*100)/filesize);
+        printf("\t\t%d%%\n",porcent);
+        //printf("ENTROU\n");
         if(i < filesize - 1){
             for (int i = 7; i >= 0; i--) {
                 if ((byte & (1 << i)) != 0) {
-                    printf("\tDIR\n");
+                    //printf("\tDIR\n");
                     aux = aux->dir;
                 } else {
-                    printf("\tESQ\n");
+                    //printf("\tESQ\n");
                     aux = aux->esq;
                 }
                 
                 if (aux->esq == NULL && aux->dir == NULL) {
-                    printf("FOIA\n");
-                    printf("%c", *(unsigned char*)aux->valor);
+                    //printf("FOIA\n");
+                    //printf("%c", *(unsigned char*)aux->valor);
                     fwrite(aux->valor, 1, 1, new_file);
                     aux = huff; 
                 }
@@ -675,16 +675,16 @@ void descompactar(const char *nomedoarquivo, const char *novoarquivo, lista **li
         else{
             for (int i = 7; i >= trash; i--) {
                 if ((byte & (1 << i)) != 0) {
-                    printf("\tDIR\n");
+                    //printf("\tDIR\n");
                     aux = aux->dir;
                 } else {
-                    printf("\tESQ\n");
+                    //printf("\tESQ\n");
                     aux = aux->esq;
                 }
                 
                 if (aux->esq == NULL && aux->dir == NULL) {
-                    printf("FOIA\n");
-                    printf("%c", *(unsigned char*)aux->valor);
+                    //printf("FOIA\n");
+                    //printf("%c", *(unsigned char*)aux->valor);
                     fwrite(aux->valor, 1, 1, new_file);
                     aux = huff; 
                 }
