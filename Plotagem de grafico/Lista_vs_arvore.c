@@ -91,12 +91,6 @@ int binary_tree_seach(binary_tree *root, int item , int i) {
     }
 }
 
-void reset_array(int* array, int size){ //reseta os valores aleatorios anteriormente gerados
-    for(int i = 0 ; i < size ; i++){
-        array[i] = -1;
-    }
-}
-
 int random_num(int* used_numbers, int size) { // Função para gerar número aleatório
     int num;
     int is_unique;
@@ -121,7 +115,6 @@ int main() { //adicionar um switch case para caso individual(faz a comparação 
         node* lista = create_linked_list(); //cria a lista encadeada
         binary_tree* arvore = create_empty_binary_tree(); //cria a árvore binária 
         int used_numbers[size]; // Array para armazenar números gerados
-        reset_array(used_numbers, size); //reseta os valores do array gerados no loop anterior
         for (int i = 0; i < size; i++) { //preenche o array, a lista e a árvore com os números aleatorios e 
             int num = random_num(used_numbers, size); //gera um número aleatorio
             used_numbers[i] = num; // Armazena o número gerado para evitar repetição
