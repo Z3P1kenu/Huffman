@@ -41,31 +41,3 @@ BTreeNode* search(BTreeNode *root, int k)
 2. Se a chave for encontrada no nó atual, retorna o nó
 3. Se o nó for uma folha e a chave não for encontrada, retorna NULL
 4. Caso contrário, busca recursivamente no filho apropriado
-
-## Função Main
-
-### Visão Geral
-A função `main` serve como ponto de entrada do programa e demonstra o uso da árvore B através de um exemplo prático.
-
-```c
-int main()
-```
-
-**Funcionalidade:**
-1. Cria uma árvore B vazia com um nó raiz (folha)
-2. Insere uma sequência de valores para demonstração:
-   - 10, 20, 5, 6, 12, 30, 7, 17
-3. Realiza uma travessia da árvore para exibir os elementos em ordem
-4. Retorna 0 para indicar execução bem-sucedida
-
-**Exemplo de Uso:**
-```c
-BTreeNode *root = createNode(1);  // Cria árvore vazia
-insert(&root, 10);               // Insere valores
-insert(&root, 20);
-// ... mais inserções ...
-traverse(root);                  // Exibe árvore em ordem
-```
-
-**Saída Esperada:**
-Uma sequência ordenada dos números inseridos na árvore.
