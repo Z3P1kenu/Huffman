@@ -1,4 +1,4 @@
-# Documentação da Árvore B - Funções de Busca e Main
+# Documentação da Árvore B - Funções de Busca
 
 ## Função de Busca (search)
 
