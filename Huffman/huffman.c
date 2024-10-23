@@ -474,19 +474,14 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     //----------------------------
     //Compactação
 
-    
-
     quick_sort_linked_list(list);
-
 
     arvore_de_huffman(list);
 
-
     profundidade = altura((*list)->raiz);
 
-
-
     dicionario = alocar_dicionario(profundidade);
+
     criar_dicionario(dicionario, (*list)->raiz, "", profundidade);
 
     //----------------------------
@@ -517,13 +512,10 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     for(long i = 0; i < filesize; i++){
         char *code = dicionario[buffer[i]];
         for(long j = 0; code[j]; j++){
-            //porcent = (((i + 1)*100)/filesize);
-            //printf("\t\t%d%%\n",porcent);
             if(code[j] == '1') {
                 bit_no_buffer |= (1 << (7 - bit_count));
             }
             bit_count++;
-            total_bits++;
 
             if(bit_count == 8){
                 fwrite(&bit_no_buffer, 1, 1, new_file);
@@ -533,12 +525,12 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
         }
     }
 
-    // Escrever os bits restantes, se houver
+    //Escrever os bits restantes, se houver
     if(bit_count > 0){
         fwrite(&bit_no_buffer, 1, 1, new_file);
     }
 
-    // Calcular e escrever os metadados
+    //Calcular e escrever os metadados
     tamanho = tamanho_arvore((*list)->raiz) + 1 + sobra;
     trash = (8 - (total_bits % 8)) % 8;
     uint16_t metadados = (trash << 13) | tamanho;
