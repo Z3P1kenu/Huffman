@@ -91,13 +91,13 @@ int binary_tree_seach(binary_tree *root, int item , int i) {
     }
 }
 
-int random_num(int* used_numbers, int size) { // Função para gerar número aleatório
+int random_num(int* used_numbers, int size , int current) { // Função para gerar número aleatório
     int num;
     int is_unique;
     do {
         num = rand() % size; // Gera um número aleatório entre 0 e size
         is_unique = 1; // Assume que é único
-        for (int i = 0; i < size; i++) {// Verifica se o número já foi gerado
+        for (int i = 0; i < current; i++) {// Verifica se o número já foi gerado
             if (used_numbers[i] == num) {
                 is_unique = 0;
                 break;
@@ -111,25 +111,34 @@ int main() { //adicionar um switch case para caso individual(faz a comparação 
     srand(time(NULL)); // gera uma semente de geração aleatoria para a da função Rand() 
     printf("Qual o tamanho Minimo e Maximo da entrada da entrada? ");
     scanf("%d %d", &min_size , &max_size); //escaneia o tamanho maximo de dados desejado
+    int linked_list_comparison[max_size - min_size + 1], binary_tree_comparison[max_size - min_size + 1];//gera um array do tamanho da diferença dos valores iniciais e finais (ex:10 - 1 + 1 = array[10])
     for(int size = min_size; size <= max_size ; size++){ //testa as estruturas com uma entrada de 1 ao número maximo definido pelo usuário 
         node* lista = create_linked_list(); //cria a lista encadeada
         binary_tree* arvore = create_empty_binary_tree(); //cria a árvore binária 
         int used_numbers[size]; // Array para armazenar números gerados
         for (int i = 0; i < size; i++) { //preenche o array, a lista e a árvore com os números aleatorios e 
-            int num = random_num(used_numbers, size); //gera um número aleatorio
+            int num = random_num(used_numbers, size , i); //gera um número aleatorio
             used_numbers[i] = num; // Armazena o número gerado para evitar repetição
             lista = add_linked_list(lista, num); //adicionar o número aleatorio gerado a lista
             arvore = add_binary_tree(arvore, num); //adicionar o número aleatorio gerado a árvore
         }
         printf("Lista encadeada: ");
         print_linked_list(lista);// Imprimir lista 
-        printf("Árvore binária: "); 
+        printf("Arvore binaria: "); 
         print_binary_tree(arvore);//imprime a árvore em ordem
         printf("\n");
-        int search_item = used_numbers[size-1]; //procura o ultimo item (também pode procurar um numero aleatorio, é so trocar [size-1] por [rand() % size])
+        int search_item = used_numbers[size - 1]; //procura o ultimo item (também pode procurar um numero aleatorio, é so trocar [size-1] por [rand() % size])
         printf("Procurando o item: %d\n", search_item);
-        int num_list = list_seach(lista, search_item, 0); // Buscar o número na lista e contar comparações
-        int num_binary = binary_tree_seach(arvore, search_item, 0); // Buscar o número na árvore e contar comparações
-        printf("Número de comparações até achar\nNa Árvore de busca binária: %d\nNa Lista encadeada: %d\n\n", num_binary, num_list);
+        linked_list_comparison[size - min_size] = list_seach(lista, search_item, 0); // Buscar o número na lista, conta as comparações e armazena em um array ([size - min_size] = 0)
+        binary_tree_comparison[size - min_size] = binary_tree_seach(arvore, search_item, 0); // Buscar o número na árvore, contar comparações e armazena em um array ([size - min_size] = 0)
+        printf("Numero de comparacoes ate achar\nNa Lista encadeada: %d\nNa Arvore de busca binaria: %d\n\n", linked_list_comparison[size - min_size], binary_tree_comparison[size - min_size]);
+    }
+    printf("resultados da comparacao\nNa lista encadeada: "); 
+    for(int i = 0; i < (max_size - min_size + 1); i++){
+        printf("L(%d) = %d ", (i + 1),linked_list_comparison[i]);
+    }
+    printf("\nresultados da comparacao\nNa Arvore de busca binaria: ");
+    for(int i = 0; i < (max_size - min_size + 1); i++){
+        printf("T(%d) = %d ", (i + 1), binary_tree_comparison[i]);
     }
 }
