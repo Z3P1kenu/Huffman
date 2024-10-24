@@ -487,7 +487,7 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     //----------------------------
     //Escrevendo o arquivo
 
-    new_file = fopen(novoarquivo, "wb");
+    new_file = fopen(novoarquivo, "ab");
     if(new_file == NULL) {
         perror("Erro ao escrever o arquivo");
         free(buffer);
@@ -592,10 +592,7 @@ void descompactar(const char *nomedoarquivo, const char *novoarquivo){ //Ainda v
 
     huff = ler_arvore(buffer + 2, tamanho);
 
-    //print_arvore(huff, 0);
-    //putchar('\n');
-
-    new_file = fopen(novoarquivo, "wb");
+    new_file = fopen(novoarquivo, "ab");
     if (new_file == NULL) {
         perror("Error opening output file");
         fclose(new_file);
