@@ -12,7 +12,6 @@ typedef struct arvore{
 }arvore;
 
 typedef struct lista{
-    void* tam;
     struct arvore *raiz;
     struct lista *prox, *ant;
 }lista;
@@ -35,11 +34,30 @@ void ler_metadados(FILE *arquivo, uint16_t *tam, uint8_t *trash); //Ler os 2 pri
 void swap(lista *a, lista *b); //Troca os ponteiros de lugar
 uint16_t swap_uint16(uint16_t val); //Resolve o edianess fazendo ele escrever o byte mais significativo primeiro
 
-//Funções do quick_sort
-lista* partition(lista *low, lista *high);
-void quick_sort(lista *low, lista *high);
-void quick_sort_linked_list(lista** head);
 
+void print_arvore(arvore *a, int altura){
+    if(a != NULL){
+        //printf(" P:%p", a);
+        putchar('(');
+        printf("I:%C R:%d A:%d", *((unsigned char*)a->chr), *((int*)a->rep), altura);
+        altura++;
+        print_arvore(a->esq, altura);
+        print_arvore(a->dir, altura);
+        putchar(')');
+    }
+    else{
+        printf("()");
+    }
+}
+
+void print_lista(lista *l){
+    int i = 0;
+    while(l != NULL){
+        print_arvore(l->raiz, i);
+        putchar('\n');
+        l = l->prox;
+    }
+}
 
 int main() {
     int op; //Variavel para escolher se compacta ou descompacta
@@ -144,31 +162,8 @@ void swap(lista *a, lista *b){ //Troca os ponteiros de lugar
 void escrever_metadados(FILE *arquivo, uint16_t arv_tam, uint8_t padding){
     uint16_t metadados = ((padding << 13) | arv_tam); //Desloca os bits do padding para o inicio do byte e junta com o tamanho da árvore
     metadados = swap_uint16(metadados); //Troca o byte de maior significado para frente
+    //printf("%X", metadados);
     fwrite(&metadados, sizeof(uint16_t), 1, arquivo); //Escreve o cabeçalho no arquivo
-}
-
-lista* get_tail(lista *head) {
-    lista *aux = head;
-    while (aux != NULL && aux->prox != NULL) {
-        aux = aux->prox;
-    }
-    return aux;
-}
-
-void quick_sort_linked_list(lista** head) {
-    if (*head == NULL || (*head)->prox == NULL)
-        return;
-
-    lista* last = get_tail(*head);
-    quick_sort(*head, last);
-}
-
-void quick_sort(lista *low, lista *high) {
-    if (high != NULL && low != high && low != high->prox) {
-        lista *pivot = partition(low, high);
-        quick_sort(low, pivot->ant);
-        quick_sort(pivot->prox, high);
-    }
 }
 
 void ler_metadados(FILE *arquivo, uint16_t *tam, uint8_t *trash){
@@ -211,10 +206,6 @@ lista* remover_inicio(lista **head){ //remove o primeiro item da lista
     *head = (*head)->prox;
     //(*head)->ant = NULL;
     aux->prox = NULL; //aponta o proximo pra NULL pra não dar problema de acesso de memoria
-
-    if(*head != NULL){
-        *((int*)(*head)->tam) = *((int*)aux->tam) - 1;
-    }
 
     return aux;
 }
@@ -282,6 +273,10 @@ arvore* ler_arvore(unsigned char *buffer, int tamanho){
     }
 
     arvore *no = criar_arvore('\0', NULL, NULL);
+
+    no->rep = malloc(sizeof(int));
+    *((int*)no->rep) = 1;
+
     if (buffer[posicao] == '*'){
         posicao++;
         no->chr = malloc(sizeof(unsigned char));
@@ -303,28 +298,6 @@ arvore* ler_arvore(unsigned char *buffer, int tamanho){
     }
 
     return no;
-}
-
-lista* partition(lista *low, lista *high) {
-    int pivot = *(int*)(high->raiz->rep);
-    lista *i = low->ant;
-    
-    for (lista *j = low; j != high; j = j->prox) {
-        if (*(int*)(j->raiz->rep) <= pivot) {
-            if (i == NULL)
-                i = low;
-            else
-                i = i->prox;
-            swap(i, j);
-        }
-    }
-    
-    if (i == NULL)
-        i = low;
-    else
-        i = i->prox;
-    swap(i, high);
-    return i;
 }
 
 arvore* criar_arvore(unsigned char v, arvore *esquerda, arvore *direita){ //Cria uma arvore
@@ -353,61 +326,94 @@ void addlist(lista **head, unsigned char v, int r){ //Adiciona item na lista
 
     *((int*)new->raiz->rep) = r;
     
-    new->tam = malloc(sizeof(int));
-
-    new->prox = *head;
-    new->ant = NULL;
-
     if(*head == NULL){ //Se nao tem item na lista ele cria um
-        *((int*)new->tam) = 1;
+        new->prox = NULL;
+        *head = new;
+        return;
+    }
+    else if(*((int*)(*head)->raiz->rep) > *((int*)new->raiz->rep)){
+        new->prox = *head;
+        *head = new;
+        return;
     }
     else{
-        *((int*)new->tam) = *((int*)(*head)->tam) + 1;
+        aux = *head;
+        while(aux->prox != NULL && *((int*)aux->prox->raiz->rep) <= *((int*)new->raiz->rep)){
+            aux = aux->prox;
+        }
+        new->prox = aux->prox;
+        aux->prox = new;
+        return;
     }
-
-    *head = new;
-
 }
 
 void arvore_de_huffman(lista **head){ //Pega os dois primeiros itens da lista e cria uma uma lista binaria com eles
-    lista *primeiro, *segundo;
+    lista *primeiro, *segundo, *aux = *head;
     
 
-    while((*((int*)(*head)->tam)) > 1){
-        //printf("\t%d\n", *((int*)(*head)->tam));
+    while((*head)->prox != NULL){
+        //printf("\t%p\n", *((int*)(*head)->prox));
         primeiro = remover_inicio(head); //Pega o primeiro item da lista
         //Como o primeiro item foi removido da lista o segundo vira o primeiro
         segundo = remover_inicio(head); //Pega o primeiro item da lista que era o segundo
 
         lista *new = (lista*) malloc(sizeof(lista)); //Aloca mémoria para o novo item da lista
 
-        new->tam = malloc(sizeof(int));
-
         new->raiz = criar_arvore('*', primeiro->raiz, segundo->raiz); //Cria uma arvore que tem o primeiro e segundo item como folhas
 
         new->raiz->rep = malloc(sizeof(int));
         *((int*)new->raiz->rep) = *((int*)primeiro->raiz->rep) + *((int*)segundo->raiz->rep);
 
-        if (*head != NULL) {
-            *((int*)new->tam) = *((int*)(*head)->tam) + 1; 
-        } 
-        else {
-            *((int*)new->tam) = 1;
-        }//Caso a lista não esteja vazia o novo tamanho é igual ao da cabeça + 1, caso contrario o tamanho é 1
+        if(*head == NULL || *((int*)(*head)->raiz->rep) > *((int*)new->raiz->rep)){
+            new->prox = *head;
+            *head = new;
+        }
+        else{
+            aux = *head;
+            while(aux->prox != NULL && *((int*)aux->prox->raiz->rep) <= *((int*)new->raiz->rep)){
+                aux = aux->prox;
+            }
+            new->prox = aux->prox;
+            aux->prox = new;
+        }
 
-
-        new->prox = *head;
-        *head = new;
-
-        free(primeiro->tam); //Free para evitar memory leak
-        free(segundo->tam);
         free(primeiro); //Free para evitar memory leak
         free(segundo);
 
-        quick_sort_linked_list(head);//insere a arvore na lista e ordena ela
+        //insertion_sort_list(*head);//insere a arvore na lista e ordena ela
         //print_lista(*head);
     }
 }
+
+void analisar_dicionario(char **dicionario) {
+    int min_len = 100;
+    int max_len = 0;
+    float media_len = 0;
+    int count = 0;
+    
+    for(int i = 0; i < TAM; i++) {
+        int len = strlen(dicionario[i]);
+        if(len > 0) {
+            if(len < min_len) min_len = len;
+            if(len > max_len) max_len = len;
+            media_len += len;
+            count++;
+            printf("Caractere: %c (0x%02X) -> Bits: %d, Cdigo: %s\n", 
+                   i, i, len, dicionario[i]);
+        }
+    }
+    
+    if(count > 0) {
+        media_len /= count;
+        printf("\nEstatisticas do dicionario:\n");
+        printf("Menor codigo: %d bits\n", min_len);
+        printf("Maior codigo: %d bits\n", max_len);
+        printf("Media: %.2f bits\n", media_len);
+        printf("Total de caracteres diferentes: %d\n", count);
+    }
+}
+
+
 
 void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list){ //Ainda vamos mudar isso
     int profundidade;
@@ -423,6 +429,7 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     long total_bits = 0;
 
     //Leitura do arquivo
+    //printf("niosda");
 
     file = fopen(nomedoarquivo, "rb"); //Abre o arquivo que vai ser compactado
     if(file == NULL){ //Conferir se foi aberto corretamente
@@ -441,10 +448,8 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
         fclose(file);
         return;
     }
-
-     //Lê o conteudo do arquivo e salva no buffer
-
-    current = fread(buffer, 1, filesize, file);
+    
+    current = fread(buffer, 1, filesize, file); //Lê o conteudo do arquivo e salva no buffer
     if(current != filesize){
         perror("Erro ao ler o arquivo: ");
         free(buffer);
@@ -464,6 +469,8 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
         }
     }
 
+    //print_lista(*list);
+
     if(*list == NULL){
         perror("Falha ao criar a lista");
         free(buffer);
@@ -474,20 +481,33 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     //----------------------------
     //Compactação
 
-    quick_sort_linked_list(list);
+    //putchar('\n');
+
+    //insertion_sort_list(*list);
+
+    //print_lista(*list);
 
     arvore_de_huffman(list);
 
+    //putchar('\n');
+    //print_lista(*list);
+
     profundidade = altura((*list)->raiz);
+
+    //printf("%d\n", profundidade);
 
     dicionario = alocar_dicionario(profundidade);
 
     criar_dicionario(dicionario, (*list)->raiz, "", profundidade);
+    
+    //print_lista(*list);
+
+    //analisar_dicionario(dicionario);
 
     //----------------------------
     //Escrevendo o arquivo
 
-    new_file = fopen(novoarquivo, "ab");
+    new_file = fopen(novoarquivo, "wb");
     if(new_file == NULL) {
         perror("Erro ao escrever o arquivo");
         free(buffer);
@@ -506,7 +526,7 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     int sobra = 0;
     escrever_arvore(new_file, (*list)->raiz, &sobra);
     //printf("%d", sobra);
-
+    
     
     int porcent;
     for(long i = 0; i < filesize; i++){
@@ -516,6 +536,7 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
                 bit_no_buffer |= (1 << (7 - bit_count));
             }
             bit_count++;
+            total_bits++;
 
             if(bit_count == 8){
                 fwrite(&bit_no_buffer, 1, 1, new_file);
@@ -533,11 +554,12 @@ void compactar(const char *nomedoarquivo, const char *novoarquivo, lista **list)
     //Calcular e escrever os metadados
     tamanho = tamanho_arvore((*list)->raiz) + 1 + sobra;
     trash = (8 - (total_bits % 8)) % 8;
-    uint16_t metadados = (trash << 13) | tamanho;
-    metadados = swap_uint16(metadados);
+    //printf("%d %d %d\n", tamanho, trash, total_bits);
 
     fseek(new_file, 0, SEEK_SET);
-    fwrite(&metadados, sizeof(uint16_t), 1, new_file);
+    escrever_metadados(new_file, tamanho, trash);
+
+    
 
     fclose(new_file);
     free(buffer);
@@ -589,10 +611,13 @@ void descompactar(const char *nomedoarquivo, const char *novoarquivo){ //Ainda v
     uint16_t metadados = (uint16_t) (buffer[0] << 8) | buffer[1];
     trash = (buffer[0] >> 5);
     tamanho = metadados & 0x1FFF;
+    //printf("%d %d", tamanho, trash);
 
     huff = ler_arvore(buffer + 2, tamanho);
 
-    new_file = fopen(novoarquivo, "ab");
+    //print_arvore(huff, 0);
+
+    new_file = fopen(novoarquivo, "wb");
     if (new_file == NULL) {
         perror("Error opening output file");
         fclose(new_file);
@@ -603,16 +628,20 @@ void descompactar(const char *nomedoarquivo, const char *novoarquivo){ //Ainda v
     int porcent;
     for(long i = tamanho + 2; i < filesize; i++){
         byte = buffer[i];
+        //printf("ENTROU\n");
         if(i < filesize - 1){
             for (int i = 7; i >= 0; i--){
                 if ((byte & (1 << i)) != 0){
+                    //printf("DIR\n");
                     aux = aux->dir;
-                } else {
+                } 
+                else {
+                    //printf("ESQ\n");
                     aux = aux->esq;
                 }
-                
                 if (aux->esq == NULL && aux->dir == NULL){
-                    fwrite(aux->chr, 1, 1, new_file);
+                    //printf("%c\n", *((unsigned char*)aux->chr));
+                    fwrite(((unsigned char*)aux->chr), 1, 1, new_file);
                     aux = huff; 
                 }
             }
@@ -620,16 +649,24 @@ void descompactar(const char *nomedoarquivo, const char *novoarquivo){ //Ainda v
         else{
             for (int i = 7; i >= trash; i--){
                 if ((byte & (1 << i)) != 0){
+                    //printf("DIR\n");
                     aux = aux->dir;
-                } else{
+                } 
+                else{
+                    //printf("ESQ\n");
                     aux = aux->esq;
                 }
-                
                 if (aux->esq == NULL && aux->dir == NULL){
-                    fwrite(aux->chr, 1, 1, new_file);
+
+                    //printf("%c\n", *((unsigned char*)aux->chr));
+                    fwrite(((unsigned char*)aux->chr), 1, 1, new_file);
                     aux = huff; 
                 }
             }
         }
     }
+
+    fclose(new_file);
+    free(buffer);
+    fclose(file);
 }
