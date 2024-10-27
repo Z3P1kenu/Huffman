@@ -69,13 +69,13 @@ typedef struct binary_tree {
    - Complexidade: O(n)
 
 ## Função Principal (main)
-- Permite ao usuário definir o tamanho máximo da entrada
-- Testa as estruturas com entradas crescentes de 1 até o tamanho máximo
+- Permite ao usuário definir o tamanho minimo e máximo da entrada e se o número sorteado é o último a ser gerado ou aleatório 
+- Testa as estruturas com entradas crescentes do mínimo até o tamanho máximo
 - Para cada tamanho:
   1. Cria as estruturas
   2. Gera números aleatórios únicos
   3. Insere os números em ambas estruturas
-  4. Realiza busca do último elemento inserido
+  4. Realiza busca do algum dos elementos inseridos
   5. Compara o número de operações necessárias
 
 ## Complexidade de Tempo
