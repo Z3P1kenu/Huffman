@@ -107,7 +107,7 @@ int random_num(int* used_numbers, int size , int current) { // Função para ger
     return num;
 }
 
-void save_in_file(int *linked_list_comparison, int *binary_tree_comparison, int max_size) {
+void save_in_file(int *linked_list_comparison, int *binary_tree_comparison, int max_size , int min_size) {
     FILE *file = fopen("resultados_comparacoes.txt", "w");
     if (file == NULL) {
         printf("Erro ao abrir o arquivo para escrita.\n");
@@ -115,11 +115,11 @@ void save_in_file(int *linked_list_comparison, int *binary_tree_comparison, int 
     }
     fprintf(file, "Resultados das comparações:\n");
     fprintf(file, "Lista encadeada:\n");
-    for (int i = 0; i < max_size ; i++) {
+    for (int i = 0; i < max_size - min_size + 1 ; i++) {
         fprintf(file, "L(%d) = %d\n", (i + 1), linked_list_comparison[i]);
     }
     fprintf(file, "\nÁrvore de busca binária:\n");
-    for (int i = 0; i < max_size ; i++) {
+    for (int i = 0; i < max_size - min_size + 1; i++) {
         fprintf(file, "T(%d) = %d\n", (i + 1), binary_tree_comparison[i]);
     }
     fclose(file);
@@ -169,5 +169,5 @@ int main() {
     for(int i = 0; i < (max_size - min_size + 1); i++){
         printf("T(%d) = %d ", (i + 1), binary_tree_comparison[i]);
     }
-    save_in_file(linked_list_comparison, binary_tree_comparison, max_size);
+    save_in_file(linked_list_comparison, binary_tree_comparison, max_size , min_size);
 }
